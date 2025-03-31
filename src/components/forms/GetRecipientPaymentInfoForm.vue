@@ -19,8 +19,26 @@ interface Props {
 
 defineProps<Props>()
 
+// Define the complete form data shape
+interface PaymentFormData {
+  // Recipient information
+  recipient: Recipient
+
+  // Source amount and currency
+  sourceAmount: number
+  sourceCurrency: Currency
+
+  // Target currency and converted amount
+  targetCurrency: Currency
+  targetAmount: number
+
+  // Conversion details
+  exchangeRate: number
+  convertedAt: string // ISO timestamp of when conversion occurred
+}
+
 const emit = defineEmits<{
-  (e: 'submit', data: { recipient: Recipient; targetCurrency: Currency; sendAmount: number }): void
+  (e: 'submit', data: PaymentFormData): void
 }>()
 
 // Atomic state with refs
@@ -62,12 +80,23 @@ const getConversionParams = () => {
 const handleSubmit = async (e: Event) => {
   e.preventDefault()
   const params = getConversionParams()
-  if (!params || !selectedRecipient.value) return
+  if (!params || !selectedRecipient.value || !conversionData.value) return
 
   emit('submit', {
+    // Recipient information
     recipient: selectedRecipient.value,
+
+    // Source amount and currency
+    sourceAmount: params.amount,
+    sourceCurrency: params.from,
+
+    // Target currency and converted amount
     targetCurrency: params.to,
-    sendAmount: params.amount,
+    targetAmount: conversionData.value.convertedAmount,
+
+    // Conversion details
+    exchangeRate: conversionData.value.rate,
+    convertedAt: new Date().toISOString(),
   })
 }
 
@@ -99,6 +128,17 @@ const targetAmount = computed(() => {
 const exchangeRate = computed(() => {
   if (!conversionData.value) return null
   return formatCurrency(conversionData.value.rate)
+})
+
+// Computed to check if form can be submitted
+const canSubmit = computed(() => {
+  return (
+    selectedRecipient.value &&
+    parsedAmount.value &&
+    !isConverting.value &&
+    !isError.value &&
+    conversionData.value
+  )
 })
 </script>
 
@@ -204,11 +244,7 @@ const exchangeRate = computed(() => {
 
       <div class="flex justify-end gap-3">
         <BaseButton v-if="onBack" variant="secondary" @click="onBack"> Back </BaseButton>
-        <BaseButton
-          type="submit"
-          :disabled="!selectedRecipient || !parsedAmount || isConverting || isError"
-          :loading="isConverting"
-        >
+        <BaseButton type="submit" :disabled="!canSubmit" :loading="isConverting">
           Continue
         </BaseButton>
       </div>
