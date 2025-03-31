@@ -5,6 +5,7 @@ import { computed, ref } from 'vue'
 import type { Recipient } from '@/composables/useRecipients'
 import type { Currency } from '@/types'
 import { useCurrencyConversion } from '@/composables/useCurrencyConversion'
+import { useDebounceFn } from '@vueuse/core'
 
 defineOptions({
   name: 'GetRecipientPaymentInfoForm',
@@ -32,6 +33,9 @@ const formData = ref<FormData>({
   sendAmount: null,
 })
 
+// Separate ref for the input value to handle debouncing
+const sendAmountInput = ref('')
+
 // When recipient changes, update the target currency to match their currency
 const handleRecipientChange = (recipient: Recipient) => {
   formData.value.recipient = recipient
@@ -41,6 +45,19 @@ const handleRecipientChange = (recipient: Recipient) => {
 const handleSubmit = async (e: Event) => {
   e.preventDefault()
   emit('submit', formData.value)
+}
+
+// Debounced handler for updating the actual send amount
+const updateSendAmount = useDebounceFn((value: string) => {
+  const numValue = value ? parseFloat(value) : null
+  formData.value.sendAmount = numValue
+}, 300)
+
+// Watch the input value and update the form data through debounce
+const handleSendAmountInput = (e: Event) => {
+  const value = (e.target as HTMLInputElement).value
+  sendAmountInput.value = value
+  updateSendAmount(value)
 }
 
 // Create conversion parameters when we have all required fields
@@ -56,12 +73,33 @@ const conversionParams = computed(() => {
 })
 
 // Use the currency conversion hook
-const { data: conversionData, isPending: isConverting } = useCurrencyConversion(conversionParams)
+const {
+  data: conversionData,
+  isPending: isConverting,
+  isError,
+  error,
+} = useCurrencyConversion(conversionParams)
+
+// Format currency with 2 decimal places
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
 
 // Show converted amount when available
 const targetAmount = computed(() => {
   if (isConverting.value) return 'Converting...'
-  return conversionData.value?.convertedAmount ?? null
+  if (isError.value) return 'Error converting amount'
+  if (!conversionData.value) return null
+  return formatCurrency(conversionData.value.convertedAmount)
+})
+
+// Format exchange rate
+const exchangeRate = computed(() => {
+  if (!conversionData.value) return null
+  return formatCurrency(conversionData.value.rate)
 })
 </script>
 
@@ -91,7 +129,8 @@ const targetAmount = computed(() => {
             <span class="top-1/2 left-3 absolute text-gray-500 -translate-y-1/2">$</span>
             <input
               id="sendAmount"
-              v-model="formData.sendAmount"
+              :value="sendAmountInput"
+              @input="handleSendAmountInput"
               type="number"
               min="0"
               step="0.01"
@@ -102,16 +141,70 @@ const targetAmount = computed(() => {
           </div>
         </div>
 
-        <div v-if="targetAmount !== null" class="bg-gray-50 p-4 rounded-md">
+        <div
+          v-if="targetAmount !== null"
+          class="bg-gray-50 p-4 rounded-md"
+          :class="{
+            'bg-red-50': isError,
+          }"
+        >
           <div class="text-gray-600 text-sm">Target Amount:</div>
-          <div class="font-medium text-gray-900 text-lg">
+          <div
+            class="font-medium text-lg"
+            :class="{
+              'text-gray-900': !isError,
+              'text-gray-500': isConverting,
+              'text-red-600': isError,
+            }"
+          >
             <template v-if="isConverting">
-              <span class="text-gray-500">Converting...</span>
+              <span class="inline-flex items-center gap-2">
+                <svg
+                  class="w-4 h-4 text-gray-500 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Converting...
+              </span>
+            </template>
+            <template v-else-if="isError">
+              <span class="inline-flex items-center gap-2">
+                <svg
+                  class="w-4 h-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                {{ error?.message || 'Error converting amount' }}
+              </span>
             </template>
             <template v-else> {{ targetAmount }} {{ formData.targetCurrency }} </template>
           </div>
-          <div v-if="conversionData" class="mt-1 text-gray-500 text-sm">
-            Rate: 1 USD = {{ conversionData.rate }} {{ formData.targetCurrency }}
+          <div v-if="exchangeRate" class="mt-1 text-gray-500 text-sm">
+            Rate: 1 USD = {{ exchangeRate }} {{ formData.targetCurrency }}
           </div>
         </div>
       </div>
@@ -128,7 +221,7 @@ const targetAmount = computed(() => {
         <button
           type="submit"
           class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-white"
-          :disabled="!formData.recipient || !formData.sendAmount"
+          :disabled="!formData.recipient || !formData.sendAmount || isConverting || isError"
         >
           Continue
         </button>
