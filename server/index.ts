@@ -3,6 +3,85 @@ import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 
+// Define currency schema
+const currencySchema = z.enum([
+  'EUR', // Euro
+  'USD', // US Dollar
+  'GBP', // British Pound Sterling
+  'JPY', // Japanese Yen
+  'CHF', // Swiss Franc
+  'CAD', // Canadian Dollar
+  'AUD', // Australian Dollar
+  'CNY', // Chinese Yuan
+])
+
+type Currency = z.infer<typeof currencySchema>
+
+// Define recipient schema
+const recipientSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email format'),
+  type: z.enum(['individual', 'company']),
+  currency: currencySchema,
+})
+
+type Recipient = z.infer<typeof recipientSchema>
+
+// Type for conversion rates
+type ConversionRates = {
+  [K in Currency]?: {
+    [T in Currency]?: number
+  }
+}
+
+// Currency conversion rates (ratio of target currency per base currency)
+const conversionRates: ConversionRates = {
+  USD: {
+    EUR: 0.85, // 1 USD = 0.85 EUR
+    GBP: 0.73,
+    JPY: 110.0,
+    CHF: 0.92,
+    CAD: 1.25,
+    AUD: 1.35,
+    CNY: 6.45,
+  },
+  EUR: {
+    USD: 1.18,
+    GBP: 0.86,
+    JPY: 129.5,
+    CHF: 1.08,
+    CAD: 1.47,
+    AUD: 1.59,
+    CNY: 7.59,
+  },
+  GBP: {
+    USD: 1.37,
+    EUR: 1.16,
+    JPY: 150.7,
+    CHF: 1.26,
+    CAD: 1.71,
+    AUD: 1.85,
+    CNY: 8.83,
+  },
+}
+
+// Generate reverse rates for all currency pairs
+Object.entries(conversionRates).forEach(([baseCurrency, rates]) => {
+  if (rates) {
+    Object.entries(rates).forEach(([targetCurrency, rate]) => {
+      if (!conversionRates[targetCurrency as Currency]) {
+        conversionRates[targetCurrency as Currency] = {}
+      }
+      if (conversionRates[targetCurrency as Currency]) {
+        conversionRates[targetCurrency as Currency]![baseCurrency as Currency] = Number(
+          (1 / rate).toFixed(4),
+        )
+      }
+    })
+  }
+})
+
 const app = new Hono()
   .use(
     '/*',
@@ -52,6 +131,45 @@ const app = new Hono()
 
     return c.json(recipient)
   })
+  .get(
+    '/currency/convert',
+    zValidator(
+      'query',
+      z.object({
+        from: currencySchema,
+        to: currencySchema,
+        amount: z.string().transform((val) => Number(val)),
+      }),
+    ),
+    (c) => {
+      const { from, to, amount } = c.req.valid('query')
+
+      // Check if we have a conversion rate for this pair
+      const fromRates = conversionRates[from]
+      if (!fromRates || !fromRates[to]) {
+        return c.json(
+          {
+            error: `Conversion rate not available for ${from} to ${to}`,
+          },
+          400,
+        )
+      }
+
+      const rate = fromRates[to]!
+      const convertedAmount = Number((amount * rate).toFixed(2))
+
+      return c.json({
+        from,
+        to,
+        amount,
+        convertedAmount,
+        rate: Number(rate.toFixed(4)),
+      })
+    },
+  )
+  .get('/currencies', (c) => {
+    return c.json(Object.keys(conversionRates))
+  })
   .onError((err, c) => {
     console.error(`${err}`)
     return c.json(
@@ -62,31 +180,6 @@ const app = new Hono()
       500,
     )
   })
-
-// Define currency schema
-const currencySchema = z.enum([
-  'EUR', // Euro
-  'USD', // US Dollar
-  'GBP', // British Pound Sterling
-  'JPY', // Japanese Yen
-  'CHF', // Swiss Franc
-  'CAD', // Canadian Dollar
-  'AUD', // Australian Dollar
-  'CNY', // Chinese Yuan
-])
-
-type Currency = z.infer<typeof currencySchema>
-
-// Define recipient schema
-const recipientSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email format'),
-  type: z.enum(['individual', 'company']),
-  currency: currencySchema,
-})
-
-type Recipient = z.infer<typeof recipientSchema>
 
 // In-memory storage
 const recipients: Recipient[] = [
