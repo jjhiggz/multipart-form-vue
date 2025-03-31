@@ -9,9 +9,8 @@ defineOptions({
 
 interface Props {
   onBack?: () => void
+  initialData?: ComplianceData
 }
-
-const props = defineProps<Props>()
 
 interface ComplianceData {
   reason: string
@@ -19,14 +18,16 @@ interface ComplianceData {
   jobTitle: string
 }
 
+const props = defineProps<Props>()
+
 const emit = defineEmits<{
   (e: 'submit', data: ComplianceData): void
 }>()
 
 const formData = ref<ComplianceData>({
-  reason: '',
-  address: '',
-  jobTitle: '',
+  reason: props.initialData?.reason ?? '',
+  address: props.initialData?.address ?? '',
+  jobTitle: props.initialData?.jobTitle ?? '',
 })
 
 const handleSubmit = (e: Event) => {

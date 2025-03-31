@@ -113,7 +113,11 @@ const handleBack = () => {
         <p class="mb-8 text-gray-600">
           For payments over $10,000, we need additional information to comply with regulations.
         </p>
-        <ComplianceForm :on-back="handleBack" @submit="handleComplianceSubmit" />
+        <ComplianceForm
+          :on-back="handleBack"
+          :initial-data="paymentData?.compliance"
+          @submit="handleComplianceSubmit"
+        />
       </div>
     </template>
 
