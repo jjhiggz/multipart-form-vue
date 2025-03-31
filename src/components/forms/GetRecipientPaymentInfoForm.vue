@@ -4,6 +4,7 @@ import CurrencyDropdown from '@/components/CurrencyDropdown.vue'
 import { computed, ref } from 'vue'
 import type { Recipient } from '@/composables/useRecipients'
 import type { Currency } from '@/types'
+import { useCurrencyConversion } from '@/composables/useCurrencyConversion'
 
 defineOptions({
   name: 'GetRecipientPaymentInfoForm',
@@ -42,10 +43,25 @@ const handleSubmit = async (e: Event) => {
   emit('submit', formData.value)
 }
 
-// Computed property to show the target amount (for now just showing the same amount)
+// Create conversion parameters when we have all required fields
+const conversionParams = computed(() => {
+  const { sendAmount, targetCurrency } = formData.value
+  if (!sendAmount || !targetCurrency) return null
+
+  return {
+    from: 'USD' as Currency,
+    to: targetCurrency,
+    amount: sendAmount,
+  }
+})
+
+// Use the currency conversion hook
+const { data: conversionData, isPending: isConverting } = useCurrencyConversion(conversionParams)
+
+// Show converted amount when available
 const targetAmount = computed(() => {
-  if (!formData.value.sendAmount) return null
-  return formData.value.sendAmount
+  if (isConverting.value) return 'Converting...'
+  return conversionData.value?.convertedAmount ?? null
 })
 </script>
 
@@ -89,7 +105,13 @@ const targetAmount = computed(() => {
         <div v-if="targetAmount !== null" class="bg-gray-50 p-4 rounded-md">
           <div class="text-gray-600 text-sm">Target Amount:</div>
           <div class="font-medium text-gray-900 text-lg">
-            {{ targetAmount }} {{ formData.targetCurrency }}
+            <template v-if="isConverting">
+              <span class="text-gray-500">Converting...</span>
+            </template>
+            <template v-else> {{ targetAmount }} {{ formData.targetCurrency }} </template>
+          </div>
+          <div v-if="conversionData" class="mt-1 text-gray-500 text-sm">
+            Rate: 1 USD = {{ conversionData.rate }} {{ formData.targetCurrency }}
           </div>
         </div>
       </div>
