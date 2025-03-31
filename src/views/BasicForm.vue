@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CustomDropdown from '@/components/CustomDropdown.vue'
+import RecipientDropdown from '@/components/RecipientDropdown.vue'
 import { ref } from 'vue'
 
 defineOptions({
@@ -59,6 +59,7 @@ const handleFileChange = (e: Event) => {
         <label for="name">Name:</label>
         <input id="name" v-model="formData.name" type="text" required class="input" />
       </div>
+      <RecipientDropdown />
 
       <div class="form-group">
         <label for="email">Email:</label>

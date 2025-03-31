@@ -34,10 +34,3 @@ const currencyToFlag = {
   CNY: '🇨🇳',
 } as const
 </script>
-
-<template>
-  <span class="currency-flag" :class="sizeToClass[size]" :title="currency">
-    {{ currencyToFlag[currency] }}
-    <span class="currency-code">{{ currency }}</span>
-  </span>
-</template>
