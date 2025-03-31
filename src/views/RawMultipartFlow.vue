@@ -26,26 +26,7 @@ const handleConfirm = (confirmed: boolean) => {
   }
 }
 
-const handleSubmit = async (formData: FormData) => {
-  const data = new FormData()
-  data.append('name', formData.name)
-  data.append('email', formData.email)
-  data.append('recipientId', formData.recipient?.id || '')
-  formData.files.forEach((file) => {
-    data.append('files', file)
-  })
-
-  try {
-    const response = await fetch('https://httpbin.org/post', {
-      method: 'POST',
-      body: data,
-    })
-    const result = await response.json()
-    console.log('Upload successful:', result)
-  } catch (error) {
-    console.error('Upload failed:', error)
-  }
-}
+const handleSubmit = async (formData: FormData) => {}
 </script>
 
 <template>

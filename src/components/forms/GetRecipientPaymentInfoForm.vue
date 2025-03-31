@@ -32,7 +32,10 @@ const sendAmountInput = ref('')
 // Handle amount changes with debounce
 const handleAmountChange = useDebounceFn((value: string) => {
   sendAmountInput.value = value
-  sendAmount.value = value ? parseFloat(value) : null
+  const numericValue = value ? parseFloat(value) : null
+  if (!isNaN(numericValue as number)) {
+    sendAmount.value = numericValue
+  }
 }, 300)
 
 // When recipient changes, update the target currency to match their currency
@@ -52,23 +55,25 @@ const handleSubmit = async (e: Event) => {
   })
 }
 
-// Use the currency conversion hook
+// Computed params for currency conversion
+const conversionParams = computed(() => {
+  const amount = sendAmountInput.value ? parseFloat(sendAmountInput.value) : null
+  if (!amount || !selectedCurrency.value || isNaN(amount)) return null
+
+  return {
+    from: 'USD' as Currency,
+    to: selectedCurrency.value,
+    amount,
+  }
+})
+
+// Use the currency conversion hook with computed params
 const {
   data: conversionData,
   isPending: isConverting,
   isError,
   error,
-} = useCurrencyConversion(
-  computed(() => {
-    if (!sendAmount.value || !selectedCurrency.value) return null
-
-    return {
-      from: 'USD' as Currency,
-      to: selectedCurrency.value,
-      amount: sendAmount.value,
-    }
-  }),
-)
+} = useCurrencyConversion(conversionParams)
 
 // Format currency with 2 decimal places
 const formatCurrency = (amount: number) => {

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/vue-query'
+import { useQuery, keepPreviousData } from '@tanstack/vue-query'
 import { client } from '@/utils/api-client'
 import type { Currency } from '@/types'
 import type { Ref, ComputedRef } from 'vue'
@@ -20,22 +20,26 @@ export interface ConversionParams {
 export function useCurrencyConversion(params: ComputedRef<ConversionParams | null>) {
   return useQuery({
     queryKey: ['currency', 'convert', params.value] as const,
-    queryFn: async () => {
-      if (!params.value) throw new Error('Conversion parameters are required')
+    queryFn: async ({ queryKey: [, , params] }): Promise<ConversionResponse> => {
+      if (!params) throw new Error('Conversion parameters are required')
 
       const response = await client.currency.convert.$get({
         query: {
-          from: params.value.from,
-          to: params.value.to,
-          amount: params.value.amount.toString(),
+          from: params.from,
+          to: params.to,
+          amount: params.amount.toString(),
         },
       })
-      return await response.json().then((response) => {
-        if ('error' in response) return null
-        else return response
-      })
+
+      const data = await response.json()
+      if ('error' in data) {
+        throw new Error(data.error)
+      }
+      return data
     },
-    enabled: !!params.value, // Only run the query if we have parameters
-    staleTime: 30000, // Consider rates fresh for 30 seconds
+    enabled: !!params.value,
+    staleTime: 30000,
+    placeholderData: keepPreviousData,
+    retry: 1,
   })
 }
