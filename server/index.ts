@@ -4,6 +4,43 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 
 const app = new Hono()
+  .use(
+    '/*',
+    cors({
+      origin: 'http://localhost:5173',
+      allowMethods: ['GET', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'Authorization'],
+      exposeHeaders: ['Content-Length'],
+      maxAge: 600,
+      credentials: true,
+    }),
+  )
+  .get('/recipients', (c) => {
+    return c.json({
+      recipients,
+      count: recipients.length,
+    })
+  })
+  .get('/recipients/:id', (c) => {
+    const id = c.req.param('id')
+    const recipient = recipients.find((r) => r.id === id)
+
+    if (!recipient) {
+      return c.json({ error: 'Recipient not found' }, 404)
+    }
+
+    return c.json(recipient)
+  })
+  .onError((err, c) => {
+    console.error(`${err}`)
+    return c.json(
+      {
+        error: 'Internal Server Error',
+        message: err.message,
+      },
+      500,
+    )
+  })
 
 // Define currency schema
 const currencySchema = z.enum([
@@ -68,51 +105,6 @@ const recipients: Recipient[] = [
     currency: 'CHF',
   },
 ]
-
-// CORS middleware
-app.use(
-  '/*',
-  cors({
-    origin: 'http://localhost:5173',
-    allowMethods: ['GET', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-    exposeHeaders: ['Content-Length'],
-    maxAge: 600,
-    credentials: true,
-  }),
-)
-
-// Get all recipients
-app.get('/recipients', (c) => {
-  return c.json({
-    recipients,
-    count: recipients.length,
-  })
-})
-
-// Get recipient by ID
-app.get('/recipients/:id', (c) => {
-  const id = c.req.param('id')
-  const recipient = recipients.find((r) => r.id === id)
-
-  if (!recipient) {
-    return c.json({ error: 'Recipient not found' }, 404)
-  }
-
-  return c.json(recipient)
-})
-
-// Error handling
-app.onError((err, c) => {
-  console.error(`${err}`)
-  return c.json(
-    {
-      error: 'Internal Server Error',
-      message: err.message,
-    },
-    500,
-  )
-})
 
 // Start the server
 const port = 3000

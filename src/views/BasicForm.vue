@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CustomDropdown from '@/components/CustomDropdown.vue'
 import { ref } from 'vue'
 
 defineOptions({
@@ -53,7 +54,6 @@ const handleFileChange = (e: Event) => {
     <p class="description">
       This demo shows a basic multipart form implementation without any external libraries.
     </p>
-
     <form @submit="handleSubmit" class="form">
       <div class="form-group">
         <label for="name">Name:</label>
