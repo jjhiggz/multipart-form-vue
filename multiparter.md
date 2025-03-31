@@ -13,12 +13,12 @@ With a data structure like this:
 const paymentData = ref<PaymentData | null>(null)
 
 const multiparterProps = useMultiform({
-    // Used to select which form if there's multiple, otherwise this can just be null and will default to "default-multiparter"
-    key: "",
     steps: [
-        ({ navigate }) => ({
+         {
             component: Confirm
-            isComplete: computed(() => true)
+            // optional, can be used to skip steps
+            canNavigateToNext: computed(() => true)
+            canNavigateToPrevious: computed(() => true)
             props: {
             // typescript forces you to fill out all props
                 text: "Are you sure you want to do this form"
@@ -29,18 +29,54 @@ const multiparterProps = useMultiform({
                     navigate.next()
                 }
             }
-        }),
-        ({ navigate }) => ({
+        },
+        {
             component: GetRecipientPaymentInfoForm
             props: {
                 onBack: () => navigate.back(1) // move back by one
             },
             // Typesystem forces you to handle all emits
             emits: {
+            onSubmit: (data) => {
+                paymentData.value = data
+                navigate.next()
             }
-        }),
+            }
+        },
+        {
+            component: ComplianceForm
+            existsAsStep: computed(() => 
+               paymentData.value.amount > 1000
+            )
+            props: {
+            },
+            // Typesystem forces you to handle all emits
+            emits: {
+                onSubmit: (compliance) => {
+                    complianceData.value = complianceData
+                },
+                onBack: () => {
+                    navigate.back()
+                }
+            },
+        },
+        {
+            component: DetailsSummary,
+            props: {
+                data: paymentData
+            },
+            emits: {
+                onSubmit: () => {
+                    alert(JSON.stringify(paymentData))
+                }
+            }
+        }
 
     ]
 })
 </script>
+
+<template>
+     <MultipartForm  :props="multiparterProps"/>
+</template>
 ```
