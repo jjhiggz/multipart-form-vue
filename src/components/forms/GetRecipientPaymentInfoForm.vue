@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import RecipientDropdown from '@/components/RecipientDropdown.vue'
-import { ref } from 'vue'
+import CurrencyDropdown from '@/components/CurrencyDropdown.vue'
+import { computed, ref } from 'vue'
 import type { Recipient } from '@/composables/useRecipients'
+import type { Currency } from '@/types'
 
 defineOptions({
   name: 'GetRecipientPaymentInfoForm',
 })
 
 interface FormData {
-  name: string
-  email: string
-  files: File[]
   recipient: Recipient | null
+  targetCurrency: Currency | null
+  sendAmount: number | null
 }
 
 interface Props {
@@ -25,82 +26,72 @@ const emit = defineEmits<{
 }>()
 
 const formData = ref<FormData>({
-  name: '',
-  email: '',
-  files: [],
   recipient: null,
+  targetCurrency: null,
+  sendAmount: null,
 })
+
+// When recipient changes, update the target currency to match their currency
+const handleRecipientChange = (recipient: Recipient) => {
+  formData.value.recipient = recipient
+  formData.value.targetCurrency = recipient.currency as Currency
+}
 
 const handleSubmit = async (e: Event) => {
   e.preventDefault()
   emit('submit', formData.value)
 }
 
-const handleFileChange = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  if (target.files) {
-    formData.value.files = Array.from(target.files)
-  }
-}
+// Computed property to show the target amount (for now just showing the same amount)
+const targetAmount = computed(() => {
+  if (!formData.value.sendAmount) return null
+  return formData.value.sendAmount
+})
 </script>
 
 <template>
   <div>
-    <h2 class="mb-2 font-semibold text-gray-900 text-2xl">Raw Multipart Form Flow</h2>
-    <p class="mb-8 text-gray-600">
-      This demo shows a raw multipart form implementation without any external libraries.
-    </p>
+    <h2 class="mb-2 font-semibold text-gray-900 text-2xl">Payment Information</h2>
+    <p class="mb-8 text-gray-600">Select a recipient and enter the amount you'd like to send.</p>
 
     <form @submit="handleSubmit" class="space-y-6 mx-auto max-w-lg">
       <div class="space-y-2">
-        <label for="name" class="block font-medium text-gray-700">Name:</label>
-        <input
-          id="name"
-          v-model="formData.name"
-          type="text"
-          required
-          class="px-3 py-2 border border-gray-300 focus:border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-        />
-      </div>
-
-      <div class="space-y-2">
         <label class="block font-medium text-gray-700">Recipient:</label>
-        <RecipientDropdown v-model="formData.recipient" />
+        <RecipientDropdown v-model="formData.recipient" @select="handleRecipientChange" />
       </div>
 
-      <div class="space-y-2">
-        <label for="email" class="block font-medium text-gray-700">Email:</label>
-        <input
-          id="email"
-          v-model="formData.email"
-          type="email"
-          required
-          class="px-3 py-2 border border-gray-300 focus:border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-        />
-      </div>
+      <div v-if="formData.recipient" class="space-y-6">
+        <div class="space-y-2">
+          <label class="block font-medium text-gray-700">Target Currency:</label>
+          <CurrencyDropdown
+            v-model:selectedCurrency="formData.targetCurrency"
+            :defaultCurrency="formData.recipient.currency as Currency"
+          />
+        </div>
 
-      <div class="space-y-2">
-        <label for="files" class="block font-medium text-gray-700">Files:</label>
-        <input
-          id="files"
-          type="file"
-          @change="handleFileChange"
-          multiple
-          class="hover:file:bg-blue-100 file:bg-blue-50 file:mr-4 file:px-4 file:py-2 file:border-0 file:rounded-md w-full file:font-medium text-gray-600 file:text-blue-700 file:text-sm"
-        />
-      </div>
+        <div class="space-y-2">
+          <label for="sendAmount" class="block font-medium text-gray-700">Send Amount (USD):</label>
+          <div class="relative">
+            <span class="top-1/2 left-3 absolute text-gray-500 -translate-y-1/2">$</span>
+            <input
+              id="sendAmount"
+              v-model="formData.sendAmount"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              class="px-3 py-2 pl-7 border border-gray-300 focus:border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              placeholder="0.00"
+            />
+          </div>
+        </div>
 
-      <div v-if="formData.files.length" class="space-y-2 bg-gray-50 mt-4 p-4 rounded-md">
-        <h3 class="font-medium text-gray-900">Selected Files:</h3>
-        <ul class="space-y-1">
-          <li
-            v-for="file in formData.files"
-            :key="file.name"
-            class="px-3 py-2 border-gray-100 last:border-0 border-b text-gray-600 text-sm"
-          >
-            {{ file.name }} ({{ (file.size / 1024).toFixed(2) }} KB)
-          </li>
-        </ul>
+        <div v-if="targetAmount !== null" class="bg-gray-50 p-4 rounded-md">
+          <div class="text-gray-600 text-sm">Target Amount:</div>
+          <div class="font-medium text-gray-900 text-lg">
+            {{ targetAmount }} {{ formData.targetCurrency }}
+          </div>
+        </div>
       </div>
 
       <div class="flex justify-end gap-3">
@@ -115,8 +106,9 @@ const handleFileChange = (e: Event) => {
         <button
           type="submit"
           class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-white"
+          :disabled="!formData.recipient || !formData.sendAmount"
         >
-          Submit
+          Continue
         </button>
       </div>
     </form>
