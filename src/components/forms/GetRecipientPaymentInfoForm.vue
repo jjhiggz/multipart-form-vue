@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import RecipientDropdown from '@/components/RecipientDropdown.vue'
 import CurrencyDropdown from '@/components/CurrencyDropdown.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 import { computed, ref } from 'vue'
 import type { Recipient } from '@/composables/useRecipients'
 import type { Currency } from '@/types'
@@ -119,27 +121,21 @@ const exchangeRate = computed(() => {
           <label class="block font-medium text-gray-700">Target Currency:</label>
           <CurrencyDropdown
             v-model:selectedCurrency="formData.targetCurrency"
-            :defaultCurrency="formData.recipient.currency as Currency"
+            :defaultCurrency="formData.recipient.currency"
           />
         </div>
 
-        <div class="space-y-2">
-          <label for="sendAmount" class="block font-medium text-gray-700">Send Amount (USD):</label>
-          <div class="relative">
-            <span class="top-1/2 left-3 absolute text-gray-500 -translate-y-1/2">$</span>
-            <input
-              id="sendAmount"
-              :value="sendAmountInput"
-              @input="handleSendAmountInput"
-              type="number"
-              min="0"
-              step="0.01"
-              required
-              class="px-3 py-2 pl-7 border border-gray-300 focus:border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-              placeholder="0.00"
-            />
-          </div>
-        </div>
+        <BaseInput
+          v-model="sendAmountInput"
+          @input="handleSendAmountInput"
+          type="number"
+          label="Send Amount (USD):"
+          prefix="$"
+          :min="0"
+          :step="0.01"
+          required
+          placeholder="0.00"
+        />
 
         <div
           v-if="targetAmount !== null"
@@ -210,21 +206,14 @@ const exchangeRate = computed(() => {
       </div>
 
       <div class="flex justify-end gap-3">
-        <button
-          v-if="onBack"
-          type="button"
-          class="bg-white hover:bg-gray-50 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-gray-700"
-          @click="onBack"
-        >
-          Back
-        </button>
-        <button
+        <BaseButton v-if="onBack" variant="secondary" @click="onBack"> Back </BaseButton>
+        <BaseButton
           type="submit"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-white"
           :disabled="!formData.recipient || !formData.sendAmount || isConverting || isError"
+          :loading="isConverting"
         >
           Continue
-        </button>
+        </BaseButton>
       </div>
     </form>
   </div>
