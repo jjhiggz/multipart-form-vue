@@ -4,7 +4,7 @@ import { ref } from 'vue'
 import type { Recipient } from '@/composables/useRecipients'
 
 defineOptions({
-  name: 'BasicFormView',
+  name: 'GetRecipientPaymentInfoForm',
 })
 
 interface FormData {
@@ -13,6 +13,16 @@ interface FormData {
   files: File[]
   recipient: Recipient | null
 }
+
+interface Props {
+  onBack?: () => void
+}
+
+defineProps<Props>()
+
+const emit = defineEmits<{
+  (e: 'submit', data: FormData): void
+}>()
 
 const formData = ref<FormData>({
   name: '',
@@ -23,25 +33,7 @@ const formData = ref<FormData>({
 
 const handleSubmit = async (e: Event) => {
   e.preventDefault()
-
-  const data = new FormData()
-  data.append('name', formData.value.name)
-  data.append('email', formData.value.email)
-  data.append('recipientId', formData.value.recipient?.id || '')
-  formData.value.files.forEach((file) => {
-    data.append('files', file)
-  })
-
-  try {
-    const response = await fetch('https://httpbin.org/post', {
-      method: 'POST',
-      body: data,
-    })
-    const result = await response.json()
-    console.log('Upload successful:', result)
-  } catch (error) {
-    console.error('Upload failed:', error)
-  }
+  emit('submit', formData.value)
 }
 
 const handleFileChange = (e: Event) => {
@@ -53,10 +45,10 @@ const handleFileChange = (e: Event) => {
 </script>
 
 <template>
-  <div class="bg-white shadow-sm p-8 rounded-lg">
-    <h2 class="mb-2 font-semibold text-gray-900 text-2xl">Basic Multipart Form</h2>
+  <div>
+    <h2 class="mb-2 font-semibold text-gray-900 text-2xl">Raw Multipart Form Flow</h2>
     <p class="mb-8 text-gray-600">
-      This demo shows a basic multipart form implementation without any external libraries.
+      This demo shows a raw multipart form implementation without any external libraries.
     </p>
 
     <form @submit="handleSubmit" class="space-y-6 mx-auto max-w-lg">
@@ -111,12 +103,22 @@ const handleFileChange = (e: Event) => {
         </ul>
       </div>
 
-      <button
-        type="submit"
-        class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full text-white transition-colors"
-      >
-        Submit
-      </button>
+      <div class="flex justify-end gap-3">
+        <button
+          v-if="onBack"
+          type="button"
+          class="bg-white hover:bg-gray-50 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-gray-700"
+          @click="onBack"
+        >
+          Back
+        </button>
+        <button
+          type="submit"
+          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-white"
+        >
+          Submit
+        </button>
+      </div>
     </form>
   </div>
 </template>

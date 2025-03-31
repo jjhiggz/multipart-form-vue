@@ -6,7 +6,7 @@ const route = useRoute()
 const currentTab = computed(() => route.name)
 
 const tabs = [
-  { name: 'basic', label: 'Basic Form', path: '/basic' },
+  { name: 'raw', label: 'Raw Multipart Flow', path: '/raw' },
   { name: 'multiparter', label: 'Multiparter Form', path: '/multiparter' },
 ]
 </script>
