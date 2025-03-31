@@ -5,7 +5,7 @@ import type { Recipient } from '@/composables/useRecipients'
 import CurrencyFlag from './CurrencyFlag.vue'
 
 interface Props {
-  modelValue?: string | null
+  modelValue?: Recipient | null
   placeholder?: string
   disabled?: boolean
 }
@@ -17,7 +17,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string | null): void
+  (e: 'update:modelValue', value: Recipient | null): void
+  (e: 'select', value: Recipient): void
 }>()
 
 const { data, isPending } = useRecipients()
@@ -27,10 +28,7 @@ const highlightedIndex = ref(-1)
 
 const recipients = computed(() => data.value?.recipients ?? [])
 
-const selectedRecipient = computed(() => {
-  if (!props.modelValue) return null
-  return recipients.value.find((r: Recipient) => r.id === props.modelValue)
-})
+const selectedRecipient = computed(() => props.modelValue)
 
 const closeDropdown = () => {
   isOpen.value = false
@@ -44,7 +42,8 @@ const handleClickOutside = (event: MouseEvent) => {
 }
 
 const selectRecipient = (recipient: Recipient) => {
-  emit('update:modelValue', recipient.id)
+  emit('update:modelValue', recipient)
+  emit('select', recipient)
   closeDropdown()
 }
 
@@ -165,13 +164,13 @@ onUnmounted(() => {
         class="px-4 py-2.5 transition-colors cursor-pointer"
         :class="{
           'bg-blue-50': highlightedIndex === index,
-          'bg-gray-50': recipient.id === modelValue,
-          'hover:bg-gray-50': highlightedIndex !== index && recipient.id !== modelValue,
+          'bg-gray-50': recipient.id === modelValue?.id,
+          'hover:bg-gray-50': highlightedIndex !== index && recipient.id !== modelValue?.id,
         }"
         @click="selectRecipient(recipient)"
         @mouseover="highlightedIndex = index"
         role="option"
-        :aria-selected="recipient.id === modelValue"
+        :aria-selected="recipient.id === modelValue?.id"
       >
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
