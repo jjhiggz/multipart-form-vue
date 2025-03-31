@@ -18,6 +18,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@hono/client": "^0.0.3",
     "@hono/node-server": "^1.14.0",
     "@hono/zod-validator": "^0.4.3",
     "@tailwindcss/vite": "^4.0.17",

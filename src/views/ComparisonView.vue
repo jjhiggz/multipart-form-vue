@@ -1,19 +1,34 @@
 <script setup lang="ts">
+import { useRecipients } from '@/composables/useRecipients'
+
 defineOptions({
   name: 'ComparisonView',
 })
+
+const { data, isPending, isError, error } = useRecipients()
 </script>
 
 <template>
   <div class="demo-content">
     <h2>Implementation Comparison</h2>
     <p class="description">
-      This view will compare the basic implementation with the Multiparter implementation.
+      This view compares the basic implementation with the Multiparter implementation.
     </p>
 
-    <div class="placeholder">
-      <p>Comparison details will be added here</p>
+    <div class="recipients-list" v-if="!isPending && !isError">
+      <h3>Recipients ({{ data?.count }})</h3>
+      <ul>
+        <li v-for="recipient in data?.recipients" :key="recipient.id">
+          <strong>{{ recipient.name }}</strong>
+          <br />
+          <small>{{ recipient.email }} ({{ recipient.type }})</small>
+        </li>
+      </ul>
     </div>
+
+    <div v-else-if="isPending" class="loading">Loading recipients...</div>
+
+    <div v-else-if="isError" class="error">Error: {{ error?.message }}</div>
   </div>
 </template>
 
@@ -30,19 +45,53 @@ defineOptions({
   margin-bottom: 2rem;
 }
 
-.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
+.recipients-list {
   background-color: #f8f8f8;
-  border: 2px dashed #ddd;
+  padding: 1.5rem;
   border-radius: 8px;
   margin-top: 2rem;
 }
 
-.placeholder p {
+.recipients-list h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+}
+
+.recipients-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recipients-list li {
+  padding: 1rem;
+  background: white;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.recipients-list li:last-child {
+  margin-bottom: 0;
+}
+
+.recipients-list strong {
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.recipients-list small {
   color: #666;
-  font-style: italic;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.error {
+  color: #dc3545;
 }
 </style>
