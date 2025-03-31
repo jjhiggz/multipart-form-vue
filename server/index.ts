@@ -2,20 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
-
-// Define currency schema
-const currencySchema = z.enum([
-  'EUR', // Euro
-  'USD', // US Dollar
-  'GBP', // British Pound Sterling
-  'JPY', // Japanese Yen
-  'CHF', // Swiss Franc
-  'CAD', // Canadian Dollar
-  'AUD', // Australian Dollar
-  'CNY', // Chinese Yuan
-])
-
-type Currency = z.infer<typeof currencySchema>
+import { currencySchema, type Currency } from '../shared/types'
 
 // Define recipient schema
 const recipientSchema = z.object({
