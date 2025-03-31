@@ -1,32 +1,81 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/forms/Confirm.vue'
 import GetRecipientPaymentInfoForm from '@/components/forms/GetRecipientPaymentInfoForm.vue'
+import ComplianceForm from '@/components/forms/ComplianceForm.vue'
+import PaymentDetails from '@/components/forms/PaymentDetails.vue'
 import { ref } from 'vue'
 import type { Recipient } from '@/composables/useRecipients'
+import type { Currency } from '@/types'
 
 defineOptions({
   name: 'RawMultipartFlow',
 })
 
-interface FormData {
-  name: string
-  email: string
-  files: File[]
-  recipient: Recipient | null
+type FlowStep = 'confirm' | 'recipient-info' | 'compliance' | 'payment-details'
+
+interface PaymentData {
+  recipient: Recipient
+  sourceAmount: number
+  sourceCurrency: Currency
+  targetCurrency: Currency
+  targetAmount: number
+  exchangeRate: number
+  convertedAt: string
+  compliance?: {
+    reason: string
+    address: string
+    jobTitle: string
+  }
 }
 
-const currentStep = ref<'confirm' | 'form'>('confirm')
+const currentStep = ref<FlowStep>('confirm')
+const paymentData = ref<PaymentData | null>(null)
 
 const handleConfirm = (confirmed: boolean) => {
   if (confirmed) {
-    currentStep.value = 'form'
+    currentStep.value = 'recipient-info'
   } else {
     // Handle rejection (e.g., navigate away or show different content)
     console.log('User declined to continue')
   }
 }
 
-const handleSubmit = async (formData: FormData) => {}
+const handlePaymentInfoSubmit = (data: PaymentData) => {
+  paymentData.value = data
+
+  // Route based on amount
+  if (data.sourceAmount >= 10000) {
+    currentStep.value = 'compliance'
+  } else {
+    currentStep.value = 'payment-details'
+  }
+}
+
+const handleComplianceSubmit = (complianceData: {
+  reason: string
+  address: string
+  jobTitle: string
+}) => {
+  if (paymentData.value) {
+    paymentData.value = {
+      ...paymentData.value,
+      compliance: complianceData,
+    }
+    currentStep.value = 'payment-details'
+  }
+}
+
+const handleBack = () => {
+  switch (currentStep.value) {
+    case 'recipient-info':
+      currentStep.value = 'confirm'
+      break
+    case 'compliance':
+    case 'payment-details':
+      currentStep.value = 'recipient-info'
+      break
+  }
+}
 </script>
 
 <template>
@@ -42,11 +91,22 @@ const handleSubmit = async (formData: FormData) => {}
       />
     </template>
 
-    <template v-else>
-      <GetRecipientPaymentInfoForm
-        :on-back="() => (currentStep = 'confirm')"
-        @submit="handleSubmit"
-      />
+    <template v-else-if="currentStep === 'recipient-info'">
+      <GetRecipientPaymentInfoForm :on-back="handleBack" @submit="handlePaymentInfoSubmit" />
+    </template>
+
+    <template v-else-if="currentStep === 'compliance'">
+      <div>
+        <h2 class="mb-2 font-semibold text-gray-900 text-2xl">Compliance Information</h2>
+        <p class="mb-8 text-gray-600">
+          For payments over $10,000, we need additional information to comply with regulations.
+        </p>
+        <ComplianceForm :on-back="handleBack" @submit="handleComplianceSubmit" />
+      </div>
+    </template>
+
+    <template v-else-if="currentStep === 'payment-details' && paymentData">
+      <PaymentDetails :payment-data="paymentData" :on-back="handleBack" />
     </template>
   </div>
 </template>
