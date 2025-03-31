@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import RecipientDropdown from '@/components/RecipientDropdown.vue'
 import { ref } from 'vue'
+import type { Recipient } from '@/composables/useRecipients'
 
 defineOptions({
   name: 'BasicFormView',
@@ -10,12 +11,14 @@ interface FormData {
   name: string
   email: string
   files: File[]
+  recipient: Recipient | null
 }
 
 const formData = ref<FormData>({
   name: '',
   email: '',
   files: [],
+  recipient: null,
 })
 
 const handleSubmit = async (e: Event) => {
@@ -24,6 +27,7 @@ const handleSubmit = async (e: Event) => {
   const data = new FormData()
   data.append('name', formData.value.name)
   data.append('email', formData.value.email)
+  data.append('recipientId', formData.value.recipient?.id || '')
   formData.value.files.forEach((file) => {
     data.append('files', file)
   })
@@ -49,133 +53,70 @@ const handleFileChange = (e: Event) => {
 </script>
 
 <template>
-  <div class="demo-content">
-    <h2>Basic Multipart Form</h2>
-    <p class="description">
+  <div class="bg-white shadow-sm p-8 rounded-lg">
+    <h2 class="mb-2 font-semibold text-gray-900 text-2xl">Basic Multipart Form</h2>
+    <p class="mb-8 text-gray-600">
       This demo shows a basic multipart form implementation without any external libraries.
     </p>
-    <form @submit="handleSubmit" class="form">
-      <div class="form-group">
-        <label for="name">Name:</label>
-        <input id="name" v-model="formData.name" type="text" required class="input" />
-      </div>
-      <RecipientDropdown />
 
-      <div class="form-group">
-        <label for="email">Email:</label>
-        <input id="email" v-model="formData.email" type="email" required class="input" />
-      </div>
-
-      <div class="form-group">
-        <label for="files">Files:</label>
-        <input id="files" type="file" @change="handleFileChange" multiple class="file-input" />
+    <form @submit="handleSubmit" class="space-y-6 mx-auto max-w-lg">
+      <div class="space-y-2">
+        <label for="name" class="block font-medium text-gray-700">Name:</label>
+        <input
+          id="name"
+          v-model="formData.name"
+          type="text"
+          required
+          class="px-3 py-2 border border-gray-300 focus:border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+        />
       </div>
 
-      <div class="selected-files" v-if="formData.files.length">
-        <h3>Selected Files:</h3>
-        <ul>
-          <li v-for="file in formData.files" :key="file.name">
+      <div class="space-y-2">
+        <label class="block font-medium text-gray-700">Recipient:</label>
+        <RecipientDropdown v-model="formData.recipient" />
+      </div>
+
+      <div class="space-y-2">
+        <label for="email" class="block font-medium text-gray-700">Email:</label>
+        <input
+          id="email"
+          v-model="formData.email"
+          type="email"
+          required
+          class="px-3 py-2 border border-gray-300 focus:border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+        />
+      </div>
+
+      <div class="space-y-2">
+        <label for="files" class="block font-medium text-gray-700">Files:</label>
+        <input
+          id="files"
+          type="file"
+          @change="handleFileChange"
+          multiple
+          class="hover:file:bg-blue-100 file:bg-blue-50 file:mr-4 file:px-4 file:py-2 file:border-0 file:rounded-md w-full file:font-medium text-gray-600 file:text-blue-700 file:text-sm"
+        />
+      </div>
+
+      <div v-if="formData.files.length" class="space-y-2 bg-gray-50 mt-4 p-4 rounded-md">
+        <h3 class="font-medium text-gray-900">Selected Files:</h3>
+        <ul class="space-y-1">
+          <li
+            v-for="file in formData.files"
+            :key="file.name"
+            class="px-3 py-2 border-gray-100 last:border-0 border-b text-gray-600 text-sm"
+          >
             {{ file.name }} ({{ (file.size / 1024).toFixed(2) }} KB)
           </li>
         </ul>
       </div>
 
-      <button type="submit" class="submit-button">Submit</button>
+      <button
+        type="submit"
+        class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full text-white transition-colors"
+      >
+        Submit
+      </button>
     </form>
   </div>
 </template>
-
-<style scoped>
-.demo-content {
-  padding: 2rem;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.description {
-  color: #666;
-  margin-bottom: 2rem;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  max-width: 500px;
-  margin: 0 auto;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-label {
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.input {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.input:focus {
-  border-color: #42b883;
-  outline: none;
-}
-
-.file-input {
-  padding: 0.5rem 0;
-}
-
-.selected-files {
-  background-color: #f8f8f8;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-top: 1rem;
-}
-
-.selected-files h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-  color: #2c3e50;
-}
-
-.selected-files ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.selected-files li {
-  padding: 0.5rem;
-  border-bottom: 1px solid #eee;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.selected-files li:last-child {
-  border-bottom: none;
-}
-
-.submit-button {
-  background-color: #42b883;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.submit-button:hover {
-  background-color: #3aa876;
-}
-</style>
