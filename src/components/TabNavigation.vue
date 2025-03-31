@@ -6,9 +6,8 @@ const route = useRoute()
 const currentTab = computed(() => route.name)
 
 const tabs = [
-  { name: 'demo1', label: 'Demo 1', path: '/demo1' },
-  { name: 'demo2', label: 'Demo 2', path: '/demo2' },
-  { name: 'demo3', label: 'Demo 3', path: '/demo3' },
+  { name: 'basic', label: 'Basic Form', path: '/basic' },
+  { name: 'multiparter', label: 'Multiparter Form', path: '/multiparter' },
 ]
 </script>
 
