@@ -21,9 +21,10 @@ const emit = defineEmits<{
   (e: 'select', value: Recipient): void
 }>()
 
-const { data, isPending } = useRecipients()
+const { data, isPending, nameQuery, setNameQuery } = useRecipients()
 const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
+const searchInputRef = ref<HTMLInputElement | null>(null)
 const highlightedIndex = ref(-1)
 
 const recipients = computed(() => data.value?.recipients ?? [])
@@ -33,6 +34,7 @@ const selectedRecipient = computed(() => props.modelValue)
 const closeDropdown = () => {
   isOpen.value = false
   highlightedIndex.value = -1
+  setNameQuery('')
 }
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -73,6 +75,12 @@ const handleKeyDown = (e: KeyboardEvent) => {
     case 'Escape':
       closeDropdown()
       break
+  }
+}
+
+const handleSearchFocus = () => {
+  if (!isOpen.value) {
+    isOpen.value = true
   }
 }
 
@@ -155,8 +163,19 @@ onUnmounted(() => {
     <!-- Dropdown options -->
     <div
       v-if="isOpen && !isPending"
-      class="z-10 absolute bg-white shadow-lg mt-1 border rounded-lg w-full max-h-60 overflow-auto"
+      class="z-10 absolute bg-white shadow-lg mt-1 border rounded-lg w-full max-h-[300px] overflow-auto"
     >
+      <div class="top-0 sticky bg-white p-2 border-b">
+        <input
+          ref="searchInputRef"
+          v-model="nameQuery"
+          type="text"
+          placeholder="Search recipients by name..."
+          class="px-3 py-2 border border-gray-300 focus:border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+          @focus="handleSearchFocus"
+        />
+      </div>
+
       <div v-if="!recipients.length" class="p-4 text-gray-500 text-center">No recipients found</div>
       <div
         v-for="(recipient, index) in recipients"

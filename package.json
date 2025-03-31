@@ -23,6 +23,7 @@
     "@hono/zod-validator": "^0.4.3",
     "@tailwindcss/vite": "^4.0.17",
     "@tanstack/vue-query": "^5.71.0",
+    "@vueuse/core": "^13.0.0",
     "hono": "^4.7.5",
     "pinia": "^3.0.1",
     "tailwindcss": "^4.0.17",

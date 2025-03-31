@@ -15,12 +15,34 @@ const app = new Hono()
       credentials: true,
     }),
   )
-  .get('/recipients', (c) => {
-    return c.json({
-      recipients,
-      count: recipients.length,
-    })
-  })
+  .get(
+    '/recipients',
+    zValidator(
+      'query',
+      z.object({
+        name: z.string().optional(),
+      }),
+    ),
+    (c) => {
+      const { name } = c.req.valid('query')
+      console.log(c.req.valid('query'))
+
+      const filteredRecipients = name
+        ? recipients.filter((recipient) => {
+            const searchTerm = name.toLowerCase()
+            return (
+              recipient.name.toLowerCase().includes(searchTerm) ||
+              recipient.email.toLowerCase().includes(searchTerm)
+            )
+          })
+        : recipients
+
+      return c.json({
+        recipients: filteredRecipients,
+        count: filteredRecipients.length,
+      })
+    },
+  )
   .get('/recipients/:id', (c) => {
     const id = c.req.param('id')
     const recipient = recipients.find((r) => r.id === id)
