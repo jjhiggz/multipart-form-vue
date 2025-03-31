@@ -3,7 +3,7 @@ import RecipientDropdown from '@/components/RecipientDropdown.vue'
 import CurrencyDropdown from '@/components/CurrencyDropdown.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { computed, ref } from 'vue'
+import { computed, ref, toValue } from 'vue'
 import type { Recipient } from '@/composables/useRecipients'
 import type { Currency } from '@/types'
 import { useCurrencyConversion } from '@/composables/useCurrencyConversion'
@@ -23,19 +23,20 @@ const emit = defineEmits<{
   (e: 'submit', data: { recipient: Recipient; targetCurrency: Currency; sendAmount: number }): void
 }>()
 
-// Atomic state
+// Atomic state with refs
 const selectedRecipient = ref<Recipient | null>(null)
 const selectedCurrency = ref<Currency | null>(null)
-const sendAmount = ref<number | null>(null)
 const sendAmountInput = ref('')
+
+// Computed values for derived state
+const parsedAmount = computed(() => {
+  const value = parseFloat(sendAmountInput.value)
+  return !isNaN(value) && value > 0 ? value : null
+})
 
 // Handle amount changes with debounce
 const handleAmountChange = useDebounceFn((value: string) => {
   sendAmountInput.value = value
-  const numericValue = value ? parseFloat(value) : null
-  if (!isNaN(numericValue as number)) {
-    sendAmount.value = numericValue
-  }
 }, 300)
 
 // When recipient changes, update the target currency to match their currency
@@ -44,36 +45,39 @@ const handleRecipientChange = (recipient: Recipient) => {
   selectedCurrency.value = recipient.currency as Currency
 }
 
-const handleSubmit = async (e: Event) => {
-  e.preventDefault()
-  if (!selectedRecipient.value || !selectedCurrency.value || !sendAmount.value) return
+// Reactive getter for currency conversion params
+const getConversionParams = () => {
+  const amount = toValue(parsedAmount)
+  const currency = toValue(selectedCurrency)
 
-  emit('submit', {
-    recipient: selectedRecipient.value,
-    targetCurrency: selectedCurrency.value,
-    sendAmount: sendAmount.value,
-  })
-}
-
-// Computed params for currency conversion
-const conversionParams = computed(() => {
-  const amount = sendAmountInput.value ? parseFloat(sendAmountInput.value) : null
-  if (!amount || !selectedCurrency.value || isNaN(amount)) return null
+  if (!amount || !currency) return null
 
   return {
     from: 'USD' as Currency,
-    to: selectedCurrency.value,
+    to: currency,
     amount,
   }
-})
+}
 
-// Use the currency conversion hook with computed params
+const handleSubmit = async (e: Event) => {
+  e.preventDefault()
+  const params = getConversionParams()
+  if (!params || !selectedRecipient.value) return
+
+  emit('submit', {
+    recipient: selectedRecipient.value,
+    targetCurrency: params.to,
+    sendAmount: params.amount,
+  })
+}
+
+// Use the currency conversion hook with reactive getter
 const {
   data: conversionData,
   isPending: isConverting,
   isError,
   error,
-} = useCurrencyConversion(conversionParams)
+} = useCurrencyConversion(getConversionParams)
 
 // Format currency with 2 decimal places
 const formatCurrency = (amount: number) => {
@@ -202,7 +206,7 @@ const exchangeRate = computed(() => {
         <BaseButton v-if="onBack" variant="secondary" @click="onBack"> Back </BaseButton>
         <BaseButton
           type="submit"
-          :disabled="!selectedRecipient || !sendAmount || isConverting || isError"
+          :disabled="!selectedRecipient || !parsedAmount || isConverting || isError"
           :loading="isConverting"
         >
           Continue
