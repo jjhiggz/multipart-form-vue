@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import BasicForm from '../components/demos/BasicForm.vue'
-import MultiparterForm from '../components/demos/MultiparterForm.vue'
-import ComparisonView from '../components/demos/ComparisonView.vue'
+import BasicForm from '../views/BasicForm.vue'
+import MultiparterForm from '../views/MultiparterForm.vue'
+import ComparisonView from '../views/ComparisonView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
