@@ -25,7 +25,6 @@ const app = new Hono()
     ),
     (c) => {
       const { name } = c.req.valid('query')
-      console.log(c.req.valid('query'))
 
       const filteredRecipients = name
         ? recipients.filter((recipient) => {
