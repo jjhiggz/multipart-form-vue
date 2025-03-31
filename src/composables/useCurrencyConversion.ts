@@ -30,8 +30,10 @@ export function useCurrencyConversion(params: ComputedRef<ConversionParams | nul
           amount: params.value.amount.toString(),
         },
       })
-      const data = await response.json()
-      return data as ConversionResponse
+      return await response.json().then((response) => {
+        if ('error' in response) return null
+        else return response
+      })
     },
     enabled: !!params.value, // Only run the query if we have parameters
     staleTime: 30000, // Consider rates fresh for 30 seconds

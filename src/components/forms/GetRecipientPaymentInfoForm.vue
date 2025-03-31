@@ -13,12 +13,6 @@ defineOptions({
   name: 'GetRecipientPaymentInfoForm',
 })
 
-interface FormData {
-  recipient: Recipient | null
-  targetCurrency: Currency | null
-  sendAmount: number | null
-}
-
 interface Props {
   onBack?: () => void
 }
@@ -26,53 +20,37 @@ interface Props {
 defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'submit', data: FormData): void
+  (e: 'submit', data: { recipient: Recipient; targetCurrency: Currency; sendAmount: number }): void
 }>()
 
-const formData = ref<FormData>({
-  recipient: null,
-  targetCurrency: null,
-  sendAmount: null,
-})
-
-// Separate ref for the input value to handle debouncing
+// Atomic state
+const selectedRecipient = ref<Recipient | null>(null)
+const selectedCurrency = ref<Currency | null>(null)
+const sendAmount = ref<number | null>(null)
 const sendAmountInput = ref('')
+
+// Handle amount changes with debounce
+const handleAmountChange = useDebounceFn((value: string) => {
+  sendAmountInput.value = value
+  sendAmount.value = value ? parseFloat(value) : null
+}, 300)
 
 // When recipient changes, update the target currency to match their currency
 const handleRecipientChange = (recipient: Recipient) => {
-  formData.value.recipient = recipient
-  formData.value.targetCurrency = recipient.currency as Currency
+  selectedRecipient.value = recipient
+  selectedCurrency.value = recipient.currency as Currency
 }
 
 const handleSubmit = async (e: Event) => {
   e.preventDefault()
-  emit('submit', formData.value)
+  if (!selectedRecipient.value || !selectedCurrency.value || !sendAmount.value) return
+
+  emit('submit', {
+    recipient: selectedRecipient.value,
+    targetCurrency: selectedCurrency.value,
+    sendAmount: sendAmount.value,
+  })
 }
-
-// Debounced handler for updating the actual send amount
-const updateSendAmount = useDebounceFn((value: string) => {
-  const numValue = value ? parseFloat(value) : null
-  formData.value.sendAmount = numValue
-}, 300)
-
-// Watch the input value and update the form data through debounce
-const handleSendAmountInput = (e: Event) => {
-  const value = (e.target as HTMLInputElement).value
-  sendAmountInput.value = value
-  updateSendAmount(value)
-}
-
-// Create conversion parameters when we have all required fields
-const conversionParams = computed(() => {
-  const { sendAmount, targetCurrency } = formData.value
-  if (!sendAmount || !targetCurrency) return null
-
-  return {
-    from: 'USD' as Currency,
-    to: targetCurrency,
-    amount: sendAmount,
-  }
-})
 
 // Use the currency conversion hook
 const {
@@ -80,7 +58,17 @@ const {
   isPending: isConverting,
   isError,
   error,
-} = useCurrencyConversion(conversionParams)
+} = useCurrencyConversion(
+  computed(() => {
+    if (!sendAmount.value || !selectedCurrency.value) return null
+
+    return {
+      from: 'USD' as Currency,
+      to: selectedCurrency.value,
+      amount: sendAmount.value,
+    }
+  }),
+)
 
 // Format currency with 2 decimal places
 const formatCurrency = (amount: number) => {
@@ -113,21 +101,21 @@ const exchangeRate = computed(() => {
     <form @submit="handleSubmit" class="space-y-6 mx-auto max-w-lg">
       <div class="space-y-2">
         <label class="block font-medium text-gray-700">Recipient:</label>
-        <RecipientDropdown v-model="formData.recipient" @select="handleRecipientChange" />
+        <RecipientDropdown v-model="selectedRecipient" @select="handleRecipientChange" />
       </div>
 
-      <div v-if="formData.recipient" class="space-y-6">
+      <div v-if="selectedRecipient" class="space-y-6">
         <div class="space-y-2">
           <label class="block font-medium text-gray-700">Target Currency:</label>
           <CurrencyDropdown
-            v-model:selectedCurrency="formData.targetCurrency"
-            :defaultCurrency="formData.recipient.currency"
+            v-model:selectedCurrency="selectedCurrency"
+            :defaultCurrency="selectedRecipient.currency as Currency"
           />
         </div>
 
         <BaseInput
-          v-model="sendAmountInput"
-          @input="handleSendAmountInput"
+          :model-value="sendAmountInput"
+          @update:model-value="handleAmountChange"
           type="number"
           label="Send Amount (USD):"
           prefix="$"
@@ -197,10 +185,10 @@ const exchangeRate = computed(() => {
                 {{ error?.message || 'Error converting amount' }}
               </span>
             </template>
-            <template v-else> {{ targetAmount }} {{ formData.targetCurrency }} </template>
+            <template v-else> {{ targetAmount }} {{ selectedCurrency }} </template>
           </div>
           <div v-if="exchangeRate" class="mt-1 text-gray-500 text-sm">
-            Rate: 1 USD = {{ exchangeRate }} {{ formData.targetCurrency }}
+            Rate: 1 USD = {{ exchangeRate }} {{ selectedCurrency }}
           </div>
         </div>
       </div>
@@ -209,7 +197,7 @@ const exchangeRate = computed(() => {
         <BaseButton v-if="onBack" variant="secondary" @click="onBack"> Back </BaseButton>
         <BaseButton
           type="submit"
-          :disabled="!formData.recipient || !formData.sendAmount || isConverting || isError"
+          :disabled="!selectedRecipient || !sendAmount || isConverting || isError"
           :loading="isConverting"
         >
           Continue
