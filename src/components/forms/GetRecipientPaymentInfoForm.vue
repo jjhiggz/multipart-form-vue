@@ -15,9 +15,14 @@ defineOptions({
 
 interface Props {
   onBack?: () => void
+  initialData?: {
+    recipient: Recipient | null
+    sourceAmount: number | null
+    targetCurrency: Currency | null
+  }
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 // Define the complete form data shape
 interface PaymentFormData {
@@ -41,10 +46,12 @@ const emit = defineEmits<{
   (e: 'submit', data: PaymentFormData): void
 }>()
 
-// Atomic state with refs
-const selectedRecipient = ref<Recipient | null>(null)
-const selectedCurrency = ref<Currency | null>(null)
-const sendAmountInput = ref('')
+// Initialize form state with props or defaults
+const selectedRecipient = ref<Recipient | null>(props.initialData?.recipient ?? null)
+const selectedCurrency = ref<Currency | null>(props.initialData?.targetCurrency ?? null)
+const sendAmountInput = ref(
+  props.initialData?.sourceAmount ? props.initialData.sourceAmount.toString() : '',
+)
 
 // Computed values for derived state
 const parsedAmount = computed(() => {
@@ -60,7 +67,10 @@ const handleAmountChange = useDebounceFn((value: string) => {
 // When recipient changes, update the target currency to match their currency
 const handleRecipientChange = (recipient: Recipient) => {
   selectedRecipient.value = recipient
-  selectedCurrency.value = recipient.currency as Currency
+  // Only update the currency if it hasn't been manually selected or if it's the initial load
+  if (!selectedCurrency.value || !props.initialData?.targetCurrency) {
+    selectedCurrency.value = recipient.currency as Currency
+  }
 }
 
 // Reactive getter for currency conversion params
@@ -243,7 +253,9 @@ const canSubmit = computed(() => {
       </div>
 
       <div class="flex justify-end gap-3">
-        <BaseButton v-if="onBack" variant="secondary" @click="onBack"> Back </BaseButton>
+        <BaseButton v-if="props.onBack" variant="secondary" @click="props.onBack">
+          Back
+        </BaseButton>
         <BaseButton type="submit" :disabled="!canSubmit" :loading="isConverting">
           Continue
         </BaseButton>

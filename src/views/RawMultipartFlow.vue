@@ -92,7 +92,19 @@ const handleBack = () => {
     </template>
 
     <template v-else-if="currentStep === 'recipient-info'">
-      <GetRecipientPaymentInfoForm :on-back="handleBack" @submit="handlePaymentInfoSubmit" />
+      <GetRecipientPaymentInfoForm
+        :on-back="handleBack"
+        :initial-data="
+          paymentData
+            ? {
+                recipient: paymentData.recipient,
+                sourceAmount: paymentData.sourceAmount,
+                targetCurrency: paymentData.targetCurrency,
+              }
+            : undefined
+        "
+        @submit="handlePaymentInfoSubmit"
+      />
     </template>
 
     <template v-else-if="currentStep === 'compliance'">
