@@ -5,17 +5,40 @@ import GetRecipientPaymentInfoForm, {
 } from '@/components/forms/GetRecipientPaymentInfoForm.vue'
 import ComplianceForm, { type ComplianceFormData } from '@/components/forms/ComplianceForm.vue'
 import PaymentDetails from '@/components/forms/PaymentDetails.vue'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { getStepNavigations, type PaymentMultipartStep } from './get-step-navigations'
 
 defineOptions({
   name: 'RawMultipartFlow',
 })
 
-type FlowStep = 'confirm' | 'recipient-info' | 'compliance' | 'payment-details'
-
-const currentStep = ref<FlowStep>('confirm')
+const currentStep = ref<PaymentMultipartStep>('confirm')
 const paymentData = ref<PaymentFormData | null>(null)
 const complianceData = ref<ComplianceFormData | null>(null)
+
+const stepNavigation = computed(() =>
+  // Since this is a pure function it is extremely testable, we don't
+  // even need to test the UI to know how our step interactions are working
+  getStepNavigations({
+    complianceData: complianceData.value,
+    paymentData: paymentData.value,
+    currentStep: currentStep.value,
+  }),
+)
+
+const next = () => {
+  if (stepNavigation.value.next) currentStep.value = stepNavigation.value.next
+}
+
+const handleBack = () => {
+  if (stepNavigation.value.prev) currentStep.value = stepNavigation.value.prev
+}
+
+const defaultComplianceData: ComplianceFormData = {
+  address: '',
+  jobTitle: '',
+  reason: '',
+}
 
 const handleConfirm = (confirmed: boolean) => {
   if (confirmed) {
@@ -28,34 +51,16 @@ const handleConfirm = (confirmed: boolean) => {
 
 const handlePaymentInfoSubmit = (data: PaymentFormData) => {
   paymentData.value = data
-
-  // Route based on amount
-  if (data.sourceAmount >= 10000) {
-    currentStep.value = 'compliance'
-  } else {
-    currentStep.value = 'payment-details'
-  }
+  next()
 }
 
 const handleComplianceSubmit = (complianceFormData: ComplianceFormData) => {
   complianceData.value = complianceFormData
 }
-
-const handleBack = () => {
-  switch (currentStep.value) {
-    case 'recipient-info':
-      currentStep.value = 'confirm'
-      break
-    case 'compliance':
-    case 'payment-details':
-      currentStep.value = 'recipient-info'
-      break
-  }
-}
 </script>
 
 <template>
-  <div class="bg-white shadow-sm p-8 rounded-lg">
+  <div class="flex justify-center bg-white shadow-sm p-8 rounded-lg">
     <template v-if="currentStep === 'confirm'">
       <ConfirmDialog
         question="Would you like to start a new multipart form submission?"
@@ -91,7 +96,7 @@ const handleBack = () => {
         </p>
         <ComplianceForm
           :on-back="handleBack"
-          :initial-data="complianceData"
+          :initial-data="complianceData ?? defaultComplianceData"
           @submit="handleComplianceSubmit"
         />
       </div>

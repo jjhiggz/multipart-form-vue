@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import RawMultipartFlow from '@/views/RawMultipartFlow.vue'
+import RawMultipartFlow from '../views/RawMultipartFlow/RawMultipartFlow.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
