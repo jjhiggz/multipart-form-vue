@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/forms/Confirm.vue'
-import GetRecipientPaymentInfoForm from '@/components/forms/GetRecipientPaymentInfoForm.vue'
-import ComplianceForm from '@/components/forms/ComplianceForm.vue'
+import GetRecipientPaymentInfoForm, {
+  type PaymentFormData,
+} from '@/components/forms/GetRecipientPaymentInfoForm.vue'
+import ComplianceForm, { type ComplianceFormData } from '@/components/forms/ComplianceForm.vue'
 import PaymentDetails from '@/components/forms/PaymentDetails.vue'
 import { ref } from 'vue'
-import type { Recipient } from '@/composables/useRecipients'
-import type { Currency } from '@/types'
 
 defineOptions({
   name: 'RawMultipartFlow',
@@ -13,23 +13,9 @@ defineOptions({
 
 type FlowStep = 'confirm' | 'recipient-info' | 'compliance' | 'payment-details'
 
-interface PaymentData {
-  recipient: Recipient
-  sourceAmount: number
-  sourceCurrency: Currency
-  targetCurrency: Currency
-  targetAmount: number
-  exchangeRate: number
-  convertedAt: string
-  compliance?: {
-    reason: string
-    address: string
-    jobTitle: string
-  }
-}
-
 const currentStep = ref<FlowStep>('confirm')
-const paymentData = ref<PaymentData | null>(null)
+const paymentData = ref<PaymentFormData | null>(null)
+const complianceData = ref<ComplianceFormData | null>(null)
 
 const handleConfirm = (confirmed: boolean) => {
   if (confirmed) {
@@ -40,7 +26,7 @@ const handleConfirm = (confirmed: boolean) => {
   }
 }
 
-const handlePaymentInfoSubmit = (data: PaymentData) => {
+const handlePaymentInfoSubmit = (data: PaymentFormData) => {
   paymentData.value = data
 
   // Route based on amount
@@ -51,18 +37,8 @@ const handlePaymentInfoSubmit = (data: PaymentData) => {
   }
 }
 
-const handleComplianceSubmit = (complianceData: {
-  reason: string
-  address: string
-  jobTitle: string
-}) => {
-  if (paymentData.value) {
-    paymentData.value = {
-      ...paymentData.value,
-      compliance: complianceData,
-    }
-    currentStep.value = 'payment-details'
-  }
+const handleComplianceSubmit = (complianceFormData: ComplianceFormData) => {
+  complianceData.value = complianceFormData
 }
 
 const handleBack = () => {
@@ -115,7 +91,7 @@ const handleBack = () => {
         </p>
         <ComplianceForm
           :on-back="handleBack"
-          :initial-data="paymentData?.compliance"
+          :initial-data="complianceData"
           @submit="handleComplianceSubmit"
         />
       </div>

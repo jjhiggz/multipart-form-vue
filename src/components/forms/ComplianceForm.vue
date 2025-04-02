@@ -9,10 +9,10 @@ defineOptions({
 
 interface Props {
   onBack?: () => void
-  initialData?: ComplianceData
+  initialData?: ComplianceFormData
 }
 
-interface ComplianceData {
+export interface ComplianceFormData {
   reason: string
   address: string
   jobTitle: string
@@ -21,10 +21,10 @@ interface ComplianceData {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'submit', data: ComplianceData): void
+  (e: 'submit', data: ComplianceFormData): void
 }>()
 
-const formData = ref<ComplianceData>({
+const formData = ref<ComplianceFormData>({
   reason: props.initialData?.reason ?? '',
   address: props.initialData?.address ?? '',
   jobTitle: props.initialData?.jobTitle ?? '',
